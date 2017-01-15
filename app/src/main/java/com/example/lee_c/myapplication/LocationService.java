@@ -1,6 +1,10 @@
 package com.example.lee_c.myapplication;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.app.Service;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 import android.os.Bundle;
@@ -20,12 +24,22 @@ public class LocationService extends Service implements LocationListener {
     public LocationService() {
     }
 
-    @Override
-    public void onCreate() {
-        Log.d("LocationService", "onCreate");
+    protected void initializeLocationManager() {
         locationManager = (LocationManager) getSystemService(LOCATION_SERVICE);
         locationManager.requestLocationUpdates(locationManager.NETWORK_PROVIDER, networkInterval * ONE_SECOND_IN_MILLISECONDS, minDistance, this);
         locationManager.requestLocationUpdates(locationManager.GPS_PROVIDER, gpsInterval * ONE_SECOND_IN_MILLISECONDS, minDistance, this);
+    }
+
+    @Override
+    public void onCreate() {
+        Log.d("LocationService", "onCreate");
+        initializeLocationManager();
+
+        Intent intent = new Intent(this, AlarmReceiver.class);
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this, 0, intent, 0);
+        AlarmManager am = (AlarmManager) getSystemService(ALARM_SERVICE);
+        am.setInexactRepeating(AlarmManager.RTC_WAKEUP,
+                System.currentTimeMillis(), AlarmManager.INTERVAL_FIFTEEN_MINUTES, pendingIntent);
     }
 
     @Override
@@ -42,6 +56,7 @@ public class LocationService extends Service implements LocationListener {
     @Override
     public void onLocationChanged(Location location) {
         Log.d("LocationService", "onLocationChanged: " + location.toString());
+        AlarmReceiver.releaseWakeLockIfNeeded();
     }
 
     @Override
